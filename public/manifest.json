@@ -1,0 +1,32 @@
+{
+  "name": "NapasAman — Kualitas Udara Kediri Raya",
+  "short_name": "NapasAman",
+  "description": "Cek Kualitas Udara. Hidup Lebih Sehat. Pantauan PM2.5 real-time, rute rendah polusi, kalkulator paparan, dan lapor titik asap khusus Wilayah Eks-Karesidenan Kediri.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0B3566",
+  "lang": "id-ID",
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/napasaman-logo.png",
+      "sizes": "1024x682",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

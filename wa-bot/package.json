@@ -1,0 +1,16 @@
+{
+  "name": "napasaman-wa-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot Asli Sobat Napas (Baileys + Laravel NapasAman + Google Gemini AI)",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16",
+    "axios": "^1.7.9",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
