@@ -14,6 +14,13 @@ class NapasAmanTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function webhookHeaders(): array
+    {
+        return [
+            'X-Webhook-Secret' => (string) config('services.whatsapp.webhook_secret', 'napasaman-secret-2026'),
+        ];
+    }
+
     public function test_home_dashboard_loads_all_seven_kediri_raya_regions(): void
     {
         $response = $this->get('/');
@@ -23,6 +30,7 @@ class NapasAmanTest extends TestCase
         $response->assertSee('Cek Kualitas Udara.');
         $response->assertSee('napasaman-logo.png');
         $response->assertSee('manifest.json');
+        $response->assertSee('62895366866722');
         $response->assertSee('Kota Kediri');
         $response->assertSee('Kabupaten Kediri');
         $response->assertSee('Kabupaten Tulungagung');
@@ -32,12 +40,15 @@ class NapasAmanTest extends TestCase
         $response->assertSee('Kabupaten Trenggalek');
     }
 
-    public function test_clean_route_page_loads_successfully(): void
+    public function test_clean_route_realtime_navigation_page_loads_successfully(): void
     {
         $response = $this->get('/rute-bersih');
 
         $response->assertOk();
-        $response->assertSee('Peta Navigasi Rute Rendah Polusi');
+        $response->assertSee('Navigasi Real-Time Rute Rendah Polusi');
+        $response->assertSee('Simulasi Jalan');
+        $response->assertSee('GPS Live');
+        $response->assertSee('Kantoran');
         $response->assertSee('Simpang Lima Gumul');
         $response->assertSee('Alun-Alun Tulungagung');
         $response->assertSee('Alun-Alun Kota Blitar');
@@ -102,22 +113,51 @@ class NapasAmanTest extends TestCase
         ]);
     }
 
-    public function test_whatsapp_bot_page_and_webhook_commands(): void
+    public function test_whatsapp_bot_page_links_directly_to_official_number(): void
     {
-        $this->get('/bot-wa')->assertOk()->assertSee('Sobat Napas');
+        $response = $this->get('/bot-wa');
 
-        // 1. CEK KEDIRI (Fonnte format)
+        $response->assertOk();
+        $response->assertSee('+62 895-3668-66722');
+        $response->assertSee('https://wa.me/62895366866722?text=');
+        $response->assertSee('Buka WhatsApp Sekarang');
+    }
+
+    public function test_whatsapp_webhook_security_and_commands(): void
+    {
+        config([
+            'services.whatsapp.webhook_secret' => 'test-secret-123',
+            'services.whatsapp.verify_token' => 'test-verify-456',
+        ]);
+
+        // 1. GET verifyWebhook rejects wrong token (403) and accepts valid token (200)
+        $this->get('/api/whatsapp/webhook?hub_challenge=CHALLENGE_OK&hub_verify_token=wrong-token')
+            ->assertForbidden();
+
+        $this->get('/api/whatsapp/webhook?hub_challenge=CHALLENGE_OK&hub_verify_token=test-verify-456')
+            ->assertOk()
+            ->assertSee('CHALLENGE_OK');
+
+        // 2. POST webhook rejects missing/invalid secret (401)
+        $this->postJson('/api/whatsapp/webhook', [
+            'sender' => '6281234500001',
+            'message' => 'CEK KEDIRI',
+        ])->assertUnauthorized();
+
+        // 3. CEK KEDIRI (Baileys/Fonnte header)
         $cek = $this->postJson('/api/whatsapp/webhook', [
             'sender' => '6281234500001',
             'message' => 'CEK KEDIRI',
-        ]);
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+
         $cek->assertOk()
+            ->assertJsonPath('status', 'ok')
             ->assertJsonPath('command', 'CEK');
         $this->assertStringContainsString('Kota Kediri', $cek->json('reply'));
         $this->assertStringContainsString('/rute-bersih', $cek->json('reply'));
 
-        // 2. JOGGING TULUNGAGUNG (Meta Cloud API format)
-        $jog = $this->postJson('/api/whatsapp/webhook', [
+        // 4. JOGGING TULUNGAGUNG (Meta Cloud API HMAC signature)
+        $metaPayload = [
             'entry' => [[
                 'changes' => [[
                     'value' => [
@@ -128,18 +168,30 @@ class NapasAmanTest extends TestCase
                     ],
                 ]],
             ]],
-        ]);
+        ];
+        $rawBody = json_encode($metaPayload);
+        $metaSig = 'sha256=' . hash_hmac('sha256', $rawBody, 'test-secret-123');
+
+        $jog = $this->call('POST', '/api/whatsapp/webhook', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
+            'HTTP_X_HUB_SIGNATURE_256' => $metaSig,
+        ], $rawBody);
+
         $jog->assertOk()
+            ->assertJsonPath('status', 'ok')
             ->assertJsonPath('command', 'JOGGING');
         $this->assertStringContainsString('Kabupaten Tulungagung', $jog->json('reply'));
 
-        // 3. LAPOR command saves to smoke_reports
+        // 5. LAPOR command saves to smoke_reports
         $beforeCount = SmokeReport::count();
         $lapor = $this->postJson('/api/whatsapp/webhook', [
             'sender' => '6281234500003',
             'message' => 'LAPOR SAMPAH Pembakaran sampah dekat Simpang Lima Gumul Kediri',
-        ]);
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+
         $lapor->assertOk()
+            ->assertJsonPath('status', 'ok')
             ->assertJsonPath('command', 'LAPOR');
         $this->assertEquals($beforeCount + 1, SmokeReport::count());
         $this->assertDatabaseHas('whatsapp_logs', [
@@ -175,11 +227,14 @@ class NapasAmanTest extends TestCase
         ]);
     }
 
-    public function test_webhook_baileys_share_location_photo_report_and_gemini_fallback(): void
+    public function test_webhook_baileys_share_location_photo_report_and_gemini_ai(): void
     {
-        // 1. Share Location payload from Baileys (Kabupaten Tulungagung) with fallback (no live external Gemini call in test)
-        config(['services.gemini.api_key' => '']);
+        config([
+            'services.gemini.api_key' => '',
+            'services.whatsapp.webhook_secret' => 'test-secret-123',
+        ]);
 
+        // 1. Share Location payload from Baileys (Kabupaten Tulungagung)
         $locResponse = $this->postJson('/api/whatsapp/webhook', [
             'sender' => '6281234990001',
             'push_name' => 'Warga Tulungagung',
@@ -187,7 +242,7 @@ class NapasAmanTest extends TestCase
             'latitude' => -8.0657,
             'longitude' => 111.9025,
             'message' => '[Share Location: -8.0657, 111.9025]',
-        ]);
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
 
         $locResponse->assertOk()
             ->assertJsonPath('status', 'ok')
@@ -205,7 +260,7 @@ class NapasAmanTest extends TestCase
             'message' => 'LAPOR pembakaran sampah di pinggir jalan dekat pasar Nganjuk',
             'image_base64' => $tinyPngBase64,
             'image_mime' => 'image/png',
-        ]);
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
 
         $photoResponse->assertOk()
             ->assertJsonPath('status', 'ok')
@@ -216,7 +271,6 @@ class NapasAmanTest extends TestCase
         $this->assertStringStartsWith('reports/', $photoPath);
         $this->assertTrue(Storage::disk('public')->exists($photoPath));
 
-        // Clean up test uploaded image
         Storage::disk('public')->delete($photoPath);
 
         // 3. Free-form Q&A with mocked Gemini API response
@@ -236,7 +290,7 @@ class NapasAmanTest extends TestCase
         $aiResponse = $this->postJson('/api/whatsapp/webhook', [
             'sender' => '6281234990003',
             'message' => 'Aman gak jogging sore ini di Kediri?',
-        ]);
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
 
         $aiResponse->assertOk()
             ->assertJsonPath('status', 'ok')
@@ -247,7 +301,10 @@ class NapasAmanTest extends TestCase
 
     public function test_webhook_falls_back_cleanly_when_gemini_rate_limited(): void
     {
-        config(['services.gemini.api_key' => 'test-gemini-key']);
+        config([
+            'services.gemini.api_key' => 'test-gemini-key',
+            'services.whatsapp.webhook_secret' => 'test-secret-123',
+        ]);
         Http::fake([
             '*generateContent*' => Http::response(['error' => 'quota exceeded'], 429),
         ]);
@@ -255,7 +312,7 @@ class NapasAmanTest extends TestCase
         $fallbackResponse = $this->postJson('/api/whatsapp/webhook', [
             'sender' => '6281234990004',
             'message' => 'Kualitas udara Tulungagung gimana?',
-        ]);
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
 
         $fallbackResponse->assertOk()
             ->assertJsonPath('status', 'ok')

@@ -37,4 +37,11 @@ return [
         'endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta/models'),
     ],
 
+    'whatsapp' => [
+        'bot_number' => env('WHATSAPP_BOT_NUMBER', '62895366866722'),
+        'webhook_secret' => env('WHATSAPP_WEBHOOK_SECRET'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN', 'napasaman-verify-2026'),
+        'meta_app_secret' => env('WHATSAPP_META_APP_SECRET'),
+    ],
+
 ];

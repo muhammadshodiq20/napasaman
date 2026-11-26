@@ -1,262 +1,157 @@
 @extends('layouts.app')
 
-@section('title', 'WhatsApp Bot Sobat Napas — NapasAman Kediri Raya')
-
-@push('styles')
-<style>
-    .wa-bg {
-        background-color: #EFEAE2;
-        background-image: radial-gradient(rgba(11, 53, 102, 0.06) 1px, transparent 1px);
-        background-size: 18px 18px;
-    }
-</style>
-@endpush
+@section('title', 'WhatsApp Bot Sobat Napas (+62 895-3668-66722) — NapasAman')
 
 @section('content')
-<div x-data="sobatNapasChat()" x-init="init()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+<div x-data="{ customText: @js($defaultInitialMessage), botNumber: @js($botNumber) }"
+     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
 
-    <!-- Header -->
-    <div>
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-[#2E9E3F] text-xs font-bold border border-emerald-200">
-            💬 Simulasi Langsung + REST Webhook Siap Pakai
-        </span>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-[#0B3566] mt-2">WhatsApp Bot "Sobat Napas"</h1>
-        <p class="text-sm text-slate-600 mt-1 max-w-2xl">
-            Uji langsung asisten kualitas udara Kediri Raya lewat antarmuka chat WhatsApp di bawah ini. Seluruh pesan diproses langsung oleh controller &amp; database asli NapasAman (termasuk mencatat laporan asap baru ke tabel <code>smoke_reports</code>).
-        </p>
-    </div>
+    <!-- Hero Direct WhatsApp Card -->
+    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#075E54] via-[#0B6E57] to-[#2E9E3F] text-white p-6 sm:p-8 lg:p-10 shadow-xl">
+        <div class="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-[#38A8E8]/20 blur-3xl pointer-events-none"></div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        <!-- WhatsApp Simulator Window -->
-        <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden flex flex-col">
-            <!-- WA Header -->
-            <div class="bg-[#075E54] text-white px-5 py-3.5 flex items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-full bg-white p-1 flex items-center justify-center shrink-0 shadow">
-                        <img src="{{ asset('images/icon-192.png') }}" alt="Sobat Napas" class="w-full h-full object-contain rounded-full">
-                    </div>
-                    <div>
-                        <h2 class="font-extrabold text-sm sm:text-base leading-tight flex items-center gap-1.5">
-                            Sobat Napas — NapasAman
-                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#2E9E3F] text-[10px]">✓</span>
-                        </h2>
-                        <p class="text-[11px] text-emerald-100" x-text="sending ? 'sedang mengetik...' : 'online • Khusus Eks-Karesidenan Kediri'"></p>
-                    </div>
+        <div class="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div class="lg:col-span-7 space-y-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-xs font-bold">
+                    <span class="w-2 h-2 rounded-full bg-[#6CE07D] animate-pulse"></span>
+                    WhatsApp Bot Asli • Terhubung ke Gemini AI &amp; Data MySQL Kediri Raya
                 </div>
-                <div class="hidden sm:flex items-center gap-1.5 text-[11px] bg-white/15 px-2.5 py-1 rounded-full">
-                    <span>No. Simulasi:</span>
-                    <input type="text" x-model="senderPhone" class="bg-transparent w-28 text-white font-mono focus:outline-none border-b border-white/40 text-xs">
+
+                <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                    Chat Langsung dengan<br>
+                    <span class="text-[#B8F7C2]">Sobat Napas di WhatsApp</span>
+                </h1>
+
+                <p class="text-sm sm:text-base text-emerald-50/90 max-w-2xl leading-relaxed">
+                    Tidak perlu install aplikasi tambahan. Klik tombol di bawah untuk langsung masuk ke aplikasi WhatsApp resmi kami di nomor <strong>{{ $formattedNumber }}</strong> — pesan awal sudah terisi otomatis, Anda tinggal tekan <strong>Kirim</strong>!
+                </p>
+
+                <!-- Official Phone Number Pill + Primary Direct WA CTA -->
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                    <a href="{{ $primaryWaUrl }}" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white hover:bg-emerald-50 text-[#075E54] text-sm sm:text-base font-extrabold shadow-lg transition">
+                        <svg class="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M20.52 3.48A11.86 11.86 0 0012.06 0C5.5 0 .16 5.34.16 11.9c0 2.1.55 4.15 1.6 5.95L0 24l6.32-1.66a11.84 11.84 0 005.74 1.47h.01c6.56 0 11.9-5.34 11.9-11.9 0-3.18-1.24-6.17-3.45-8.43zM12.07 21.8h-.01a9.87 9.87 0 01-5.03-1.38l-.36-.21-3.75.98 1-3.66-.23-.38a9.84 9.84 0 01-1.51-5.25c0-5.44 4.43-9.88 9.89-9.88 2.64 0 5.12 1.03 6.98 2.9a9.82 9.82 0 012.89 6.99c0 5.45-4.43 9.89-9.87 9.89zm5.42-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.21 5.09 4.5.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.09 1.76-.72 2.01-1.42.25-.7.25-1.29.17-1.42-.07-.12-.27-.2-.57-.35z"/></svg>
+                        Buka WhatsApp Sekarang
+                    </a>
+
+                    <div class="inline-flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-black/20 backdrop-blur border border-white/15">
+                        <span class="text-xs text-emerald-100">Nomor Resmi:</span>
+                        <span class="font-mono font-extrabold text-sm tracking-wide">{{ $formattedNumber }}</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Chat Messages Area -->
-            <div id="waChatContainer" class="wa-bg p-4 sm:p-5 h-[440px] overflow-y-auto space-y-3">
-                <!-- Initial Welcome Bubble -->
-                <div class="flex justify-start">
-                    <div class="max-w-[85%] rounded-2xl rounded-tl-sm bg-white px-4 py-3 shadow-sm text-xs sm:text-sm text-slate-800 space-y-1.5">
-                        <p class="font-bold text-[#2E9E3F] text-xs">Sobat Napas 🌿</p>
-                        <p class="leading-relaxed">
-                            Halo warga Kediri Raya! Kirim pesan seperti <strong>CEK KEDIRI</strong>, <strong>JOGGING TULUNGAGUNG</strong>, atau <strong>LAPOR SAMPAH Dekat SLG Kediri</strong> untuk mencoba langsung respons otomatis saya.
-                        </p>
-                        <p class="text-[10px] text-slate-400 text-right">Aktif • Real-Time Engine</p>
-                    </div>
-                </div>
-
-                <!-- Dynamic Chat Bubbles -->
-                <template x-for="(msg, index) in messages" :key="index">
-                    <div :class="msg.from === 'user' ? 'flex justify-end' : 'flex justify-start'">
-                        <div :class="msg.from === 'user'
-                                ? 'bg-[#D9FDD3] rounded-2xl rounded-tr-sm text-slate-900'
-                                : 'bg-white rounded-2xl rounded-tl-sm text-slate-800'"
-                             class="max-w-[88%] px-4 py-2.5 shadow-sm text-xs sm:text-sm space-y-1">
-                            <div class="leading-relaxed break-words" x-html="formatWaText(msg.text)"></div>
-                            <div class="flex items-center justify-end gap-1 text-[10px] text-slate-500">
-                                <span x-text="msg.time"></span>
-                                <span x-show="msg.from === 'user'" class="text-[#38A8E8] font-bold">✓✓</span>
-                            </div>
+            <!-- Interactive Pre-filled Auto Message Composer -->
+            <div class="lg:col-span-5">
+                <div class="rounded-2xl bg-white text-slate-900 p-5 sm:p-6 shadow-2xl space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 p-1.5 border border-emerald-200 flex items-center justify-center shrink-0">
+                            <img src="{{ asset('images/icon-192.png') }}" alt="Sobat Napas" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <h2 class="font-extrabold text-[#0B3566] text-base leading-tight">Sobat Napas — NapasAman</h2>
+                            <p class="text-xs font-mono text-[#2E9E3F] font-bold">{{ $formattedNumber }}</p>
+                            <p class="text-[11px] text-slate-500">{{ $totalInteractions }} interaksi • {{ $uniqueUsers }} warga aktif</p>
                         </div>
                     </div>
-                </template>
-            </div>
 
-            <!-- Quick Command Chips -->
-            <div class="bg-slate-50 border-t border-slate-200 px-4 py-2.5 flex items-center gap-2 overflow-x-auto">
-                <span class="text-[11px] font-bold text-slate-500 shrink-0">Coba cepat:</span>
-                <template x-for="cmd in quickCommands" :key="cmd">
-                    <button type="button" @click="sendQuick(cmd)"
-                            class="shrink-0 px-3 py-1.5 rounded-full bg-white hover:bg-[#2E9E3F] text-[#0B3566] hover:text-white border border-slate-200 text-xs font-bold transition shadow-xs"
-                            x-text="cmd"></button>
-                </template>
-            </div>
+                    <div class="space-y-2">
+                        <label for="customWaMsg" class="block text-xs font-bold text-[#0B3566]">
+                            Pesan Awal Otomatis (bisa langsung kirim atau ubah dulu):
+                        </label>
+                        <textarea id="customWaMsg" x-model="customText" rows="3"
+                                  class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-[#2E9E3F] focus:bg-white focus:outline-none"></textarea>
+                    </div>
 
-            <!-- Message Composer -->
-            <form @submit.prevent="sendMessage()" class="bg-[#F0F2F5] px-4 py-3 flex items-center gap-2">
-                <input type="text" x-model="draft" :disabled="sending"
-                       placeholder="Ketik pesan (misal: CEK KEDIRI, JOGGING BLITAR, LAPOR SAMPAH ...)"
-                       class="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-[#2E9E3F] focus:outline-none">
-                <button type="submit" :disabled="sending || !draft.trim()"
-                        class="px-5 py-2.5 rounded-full bg-[#2E9E3F] hover:bg-[#237E31] disabled:opacity-50 text-white font-bold text-sm transition flex items-center gap-1.5 shrink-0">
-                    <span x-text="sending ? '...' : 'Kirim'"></span>
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-            </form>
+                    <a :href="'https://wa.me/' + botNumber + '?text=' + encodeURIComponent(customText.trim() || 'Halo Sobat Napas')"
+                       target="_blank" rel="noopener noreferrer"
+                       class="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1EB958] text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
+                        💬 Lanjut ke Aplikasi WhatsApp →
+                    </a>
+
+                    <p class="text-[11px] text-slate-500 text-center leading-relaxed">
+                        Begitu aplikasi WhatsApp terbuka, pesan di atas otomatis terisi di kolom chat. Tekan tombol <strong>Kirim</strong> dan Sobat Napas langsung membalas otomatis!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Pre-filled WhatsApp Actions -->
+    <section class="space-y-4">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-[#0B3566]">Pilih Topik Chat Siap Kirim di WhatsApp</h2>
+            <p class="text-sm text-slate-500">Klik salah satu kartu di bawah untuk langsung membuka chat WhatsApp ke <strong>{{ $formattedNumber }}</strong> dengan pesan otomatis sesuai kebutuhan Anda.</p>
         </div>
 
-        <!-- Right Column: Commands Guide & Webhook API Spec -->
-        <div class="lg:col-span-5 space-y-5">
-
-            <!-- Command Guide -->
-            <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-4">
-                <h2 class="text-lg font-extrabold text-[#0B3566]">Daftar Perintah Sobat Napas</h2>
-
-                <div class="space-y-3 text-xs sm:text-sm">
-                    <div class="p-3.5 rounded-xl bg-sky-50/70 border border-sky-200 space-y-1">
-                        <p class="font-extrabold text-[#0B3566] font-mono">CEK [Nama Wilayah]</p>
-                        <p class="text-slate-600 text-xs">Menampilkan AQI, PM2.5, PM10, NO₂, analogi batang rokok, saran aktivitas, dan link langsung ke <code>/rute-bersih</code>.</p>
-                        <p class="text-[11px] text-[#38A8E8] font-semibold">Contoh: CEK KEDIRI • CEK TULUNGAGUNG • CEK NGANJUK</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            @foreach ($quickLinks as $item)
+                @php
+                    $waLink = 'https://wa.me/' . $botNumber . '?text=' . rawurlencode($item['text']);
+                    $badgeClass = match($item['color']) {
+                        'emerald' => 'bg-emerald-50 text-[#2E9E3F] border-emerald-200',
+                        'sky' => 'bg-sky-50 text-[#0B3566] border-sky-200',
+                        'orange' => 'bg-orange-50 text-orange-700 border-orange-200',
+                        default => 'bg-[#0B3566] text-white border-[#0B3566]',
+                    };
+                @endphp
+                <a href="{{ $waLink }}" target="_blank" rel="noopener noreferrer"
+                   class="group rounded-2xl bg-white border border-slate-200 hover:border-[#2E9E3F] hover:shadow-md p-5 transition flex flex-col justify-between gap-4">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border {{ $badgeClass }}">{{ $item['badge'] }}</span>
+                            <span class="text-xs font-bold text-[#2E9E3F] group-hover:translate-x-0.5 transition">Buka WA →</span>
+                        </div>
+                        <h3 class="font-extrabold text-[#0B3566] text-base">{{ $item['title'] }}</h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">{{ $item['desc'] }}</p>
                     </div>
-
-                    <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1">
-                        <p class="font-extrabold text-[#2E9E3F] font-mono">JOGGING [Nama Wilayah]</p>
-                        <p class="text-slate-600 text-xs">Memberikan rekomendasi jam lari/olahraga paling bersih pagi &amp; sore hari ini di wilayah tersebut.</p>
-                        <p class="text-[11px] text-[#2E9E3F] font-semibold">Contoh: JOGGING BLITAR • JOGGING TRENGGALEK</p>
+                    <div class="rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-2 text-[11px] font-mono text-slate-700">
+                        "{{ $item['text'] }}"
                     </div>
-
-                    <div class="p-3.5 rounded-xl bg-orange-50/70 border border-orange-200 space-y-1">
-                        <p class="font-extrabold text-orange-700 font-mono">LAPOR [Kategori] [Lokasi]</p>
-                        <p class="text-slate-600 text-xs">Otomatis menyimpan laporan warga ke tabel <code>smoke_reports</code> &amp; menandainya sebagai hotspot aktif pada Peta Rute Bersih.</p>
-                        <p class="text-[11px] text-orange-700 font-semibold">Contoh: LAPOR SAMPAH Dekat Simpang Lima Gumul Kediri</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Webhook REST API Info (Baileys + Gemini AI + Fonnte & Meta Ready) -->
-            <div class="bg-[#0B3566] text-white rounded-2xl p-5 sm:p-6 shadow-md space-y-3">
-                <div class="flex items-center justify-between gap-2">
-                    <h3 class="text-base font-extrabold">WhatsApp Asli (Baileys) &amp; Gemini AI</h3>
-                    <span class="px-2.5 py-0.5 rounded-full {{ $geminiEnabled ? 'bg-[#2E9E3F]' : 'bg-amber-500' }} text-[10px] font-bold">
-                        {{ $geminiEnabled ? $geminiModel . ' Aktif' : 'Fallback Mode' }}
-                    </span>
-                </div>
-                <p class="text-xs text-sky-100 leading-relaxed">
-                    Mendukung <strong>tanya-jawab bebas Gemini AI</strong>, <strong>Share Location</strong>, serta <strong>Foto + caption LAPOR</strong> dari aplikasi WhatsApp asli melalui service <code>wa-bot/</code> (Baileys) maupun Fonnte &amp; Meta Cloud API:
-                </p>
-                <div class="rounded-xl bg-black/30 px-3.5 py-2.5 font-mono text-xs text-[#6CE07D] break-all">
-                    POST {{ $webhookUrl }}
-                </div>
-                <pre class="rounded-xl bg-black/30 p-3 text-[11px] text-sky-100 overflow-x-auto leading-relaxed">{
-  "sender": "6281234567890",
-  "message": "Aman gak jogging sore ini di Kediri?",
-  "latitude": -7.8166,
-  "longitude": 112.0114
-}</pre>
-                <p class="text-[11px] text-sky-200">
-                    Seluruh interaksi tercatat otomatis pada tabel MySQL <code>whatsapp_logs</code> dan foto laporan tersimpan di <code>storage/app/public/reports/</code>.
-                </p>
-            </div>
-
+                </a>
+            @endforeach
         </div>
-    </div>
+    </section>
+
+    <!-- Capabilities & How It Works -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h2 class="text-lg font-extrabold text-[#0B3566]">Fitur Cerdas di WhatsApp Sobat Napas</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div class="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 space-y-1.5">
+                    <div class="text-xl">📍</div>
+                    <p class="font-extrabold text-[#0B3566]">Share Location</p>
+                    <p class="text-slate-600 leading-relaxed">Kirim lokasi GPS Anda di WA untuk cek AQI &amp; titik asap terdekat dari 7 wilayah Kediri Raya.</p>
+                </div>
+                <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+                    <div class="text-xl">🤖</div>
+                    <p class="font-extrabold text-[#2E9E3F]">Tanya Bebas Gemini AI</p>
+                    <p class="text-slate-600 leading-relaxed">Tanya santai seperti <em>"Aman gak ajak anak ke Alun-Alun Blitar?"</em> — dijawab memakai data asli MySQL.</p>
+                </div>
+                <div class="p-4 rounded-2xl bg-orange-50/70 border border-orange-200 space-y-1.5">
+                    <div class="text-xl">📷</div>
+                    <p class="font-extrabold text-orange-700">Foto + Caption LAPOR</p>
+                    <p class="text-slate-600 leading-relaxed">Kirim foto pembakaran sampah dengan caption <code>LAPOR [Lokasi]</code> — otomatis tampil di Peta Rute Bersih!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-5 bg-[#0B3566] text-white rounded-2xl p-6 shadow-md space-y-3">
+            <div class="flex items-center justify-between gap-2">
+                <h3 class="text-base font-extrabold">Status Integrasi Backend</h3>
+                <span class="px-2.5 py-0.5 rounded-full {{ $geminiEnabled ? 'bg-[#2E9E3F]' : 'bg-amber-500' }} text-[10px] font-bold">
+                    {{ $geminiEnabled ? 'Gemini AI Aktif' : 'Rule Fallback' }}
+                </span>
+            </div>
+            <ul class="space-y-2 text-xs text-sky-100">
+                <li>• <strong>Nomor WA Bot:</strong> <span class="font-mono text-[#6CE07D]">{{ $formattedNumber }}</span></li>
+                <li>• <strong>Endpoint Webhook:</strong> <span class="font-mono text-sky-200 break-all">{{ $webhookUrl }}</span></li>
+                <li>• <strong>Keamanan Webhook:</strong> Proteksi header <code>X-Webhook-Secret</code> &amp; verifikasi token Meta Cloud API.</li>
+                <li>• <strong>Database:</strong> Seluruh chat tersimpan di <code>whatsapp_logs</code> &amp; foto laporan di <code>smoke_reports</code>.</li>
+            </ul>
+        </div>
+    </section>
+
 </div>
 @endsection
-
-@push('scripts')
-<script>
-    const INITIAL_WA_LOGS = @json($recentLogs);
-
-    function sobatNapasChat() {
-        return {
-            senderPhone: '6281234567890',
-            draft: '',
-            sending: false,
-            messages: [],
-            quickCommands: [
-                'Aman gak jogging sore ini di Kediri?',
-                'Kualitas udara Tulungagung gimana?',
-                'CEK KEDIRI',
-                'JOGGING BLITAR',
-                'LAPOR SAMPAH Dekat Simpang Lima Gumul Kediri',
-                'Cek kualitas udara Jakarta dong'
-            ],
-
-            init() {
-                // Show last 2 sample interactions if available
-                const tail = INITIAL_WA_LOGS.slice(-2);
-                tail.forEach((log) => {
-                    const t = new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                    this.messages.push({ from: 'user', text: log.incoming_message, time: t });
-                    this.messages.push({ from: 'bot', text: log.bot_reply, time: t });
-                });
-                this.scrollToBottom();
-            },
-
-            sendQuick(cmd) {
-                this.draft = cmd;
-                this.sendMessage();
-            },
-
-            async sendMessage() {
-                const text = this.draft.trim();
-                if (!text || this.sending) return;
-
-                const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                this.messages.push({ from: 'user', text: text, time: nowTime });
-                this.draft = '';
-                this.sending = true;
-                this.scrollToBottom();
-
-                try {
-                    const res = await fetch('{{ route('bot-wa.simulate') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({
-                            phone: this.senderPhone,
-                            message: text
-                        })
-                    });
-
-                    const data = await res.json();
-                    this.messages.push({
-                        from: 'bot',
-                        text: data.reply || 'Maaf, terjadi kendala memproses pesan.',
-                        time: data.timestamp || nowTime
-                    });
-                } catch (err) {
-                    this.messages.push({
-                        from: 'bot',
-                        text: 'Koneksi ke server simulasi terputus. Silakan coba kembali.',
-                        time: nowTime
-                    });
-                } finally {
-                    this.sending = false;
-                    this.scrollToBottom();
-                }
-            },
-
-            formatWaText(str) {
-                const escaped = String(str)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;');
-                return escaped
-                    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
-                    .replace(/_([^_]+)_/g, '<em class="text-slate-500">$1</em>')
-                    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-[#1F8FD0] underline font-semibold">$1</a>')
-                    .replace(/\n/g, '<br>');
-            },
-
-            scrollToBottom() {
-                this.$nextTick(() => {
-                    const box = document.getElementById('waChatContainer');
-                    if (box) box.scrollTop = box.scrollHeight;
-                });
-            }
-        }
-    }
-</script>
-@endpush

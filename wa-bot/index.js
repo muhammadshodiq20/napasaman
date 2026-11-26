@@ -7,13 +7,38 @@ import makeWASocket, {
 import axios from 'axios';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Load optional values from root Laravel .env so WHATSAPP_WEBHOOK_SECRET stays in sync automatically.
+ */
+function loadParentEnvValue(key) {
+  try {
+    const envPath = path.resolve(__dirname, '..', '.env');
+    if (!fs.existsSync(envPath)) return '';
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx === -1) continue;
+      if (trimmed.slice(0, idx).trim() === key) {
+        return trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+      }
+    }
+  } catch {
+    return '';
+  }
+  return '';
+}
+
 const WEBHOOK_URL = process.env.LARAVEL_WEBHOOK_URL || 'http://127.0.0.1:8000/api/whatsapp/webhook';
+const WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || loadParentEnvValue('WHATSAPP_WEBHOOK_SECRET') || '';
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 
 const baileysLogger = pino({ level: 'silent' });
@@ -49,7 +74,9 @@ function extractSenderPhone(msg) {
 async function startSobatNapasBot() {
   console.log('==============================================================');
   console.log(' 🌿 NapasAman — WhatsApp Bot "Sobat Napas" (Baileys + Gemini)');
+  console.log(` 📞 Nomor Bot Resmi : +62 895-3668-66722`);
   console.log(` 🔗 Laravel Webhook : ${WEBHOOK_URL}`);
+  console.log(` 🔒 Webhook Secret  : ${WEBHOOK_SECRET ? 'Aktif (X-Webhook-Secret)' : 'Tidak diset'}`);
   console.log(` 🔐 Session Folder  : ${AUTH_DIR}`);
   console.log('==============================================================\n');
 
@@ -83,7 +110,7 @@ async function startSobatNapasBot() {
     }
 
     if (connection === 'open') {
-      console.log('✅ Terhubung ke WhatsApp! Bot "Sobat Napas" siap menerima pesan warga Kediri Raya.\n');
+      console.log('✅ Terhubung ke WhatsApp! Bot "Sobat Napas" (+62 895-3668-66722) siap menerima pesan.\n');
     }
 
     if (connection === 'close') {
@@ -147,7 +174,11 @@ async function startSobatNapasBot() {
           payload.latitude = locMsg.degreesLatitude;
           payload.longitude = locMsg.degreesLongitude;
           payload.location_name = locMsg.name || locMsg.address || null;
-          payload.message = locMsg.comment || locMsg.caption || locMsg.name || `[Share Location: ${locMsg.degreesLatitude.toFixed(5)}, ${locMsg.degreesLongitude.toFixed(5)}]`;
+          payload.message =
+            locMsg.comment ||
+            locMsg.caption ||
+            locMsg.name ||
+            `[Share Location: ${locMsg.degreesLatitude.toFixed(5)}, ${locMsg.degreesLongitude.toFixed(5)}]`;
         }
         // 2. Pesan Foto (dengan atau tanpa caption)
         else if (content.imageMessage) {
@@ -193,12 +224,17 @@ async function startSobatNapasBot() {
         // Tampilkan status "mengetik..." di WhatsApp pengirim
         await sock.sendPresenceUpdate('composing', remoteJid).catch(() => {});
 
+        const headers = {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        };
+        if (WEBHOOK_SECRET) {
+          headers['X-Webhook-Secret'] = WEBHOOK_SECRET;
+        }
+
         const response = await axios.post(WEBHOOK_URL, payload, {
           timeout: 25000,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
+          headers,
         });
 
         const replyText = response.data?.reply;

@@ -24,9 +24,8 @@ Route::post('/kalkulator-paparan/hitung', [ExposureCalculatorController::class, 
 Route::get('/lapor-asap', [SmokeReportController::class, 'index'])->name('lapor-asap.index');
 Route::post('/lapor-asap', [SmokeReportController::class, 'store'])->name('lapor-asap.store');
 
-// 5. Simulasi Chat WhatsApp Bot "Sobat Napas"
+// 5. WhatsApp Bot "Sobat Napas" (Direct ke WhatsApp +62 895-3668-66722)
 Route::get('/bot-wa', [WhatsappBotController::class, 'index'])->name('bot-wa.index');
-Route::post('/bot-wa/simulasi', [WhatsappBotController::class, 'simulate'])->name('bot-wa.simulate');
 
 // 6. Autentikasi & Panel Admin / Mitra RT-RW & Bank Sampah
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
