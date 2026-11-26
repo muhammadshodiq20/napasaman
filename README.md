@@ -1,3 +1,13 @@
+---
+title: NapasAman
+emoji: 🌿
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # NapasAman — Cek Kualitas Udara. Hidup Lebih Sehat.
 
 Aplikasi Progressive Web App (PWA) pemantauan kualitas udara berbasis data, navigasi rute rendah polusi, kalkulator paparan PM2.5, crowdsourcing lapor titik asap, dan WhatsApp Bot **"Sobat Napas"** khusus **Wilayah Eks-Karesidenan Kediri (7 Daerah)** untuk kompetisi **AIRIMPACT 2026 (Tim JosJiz AG)**.

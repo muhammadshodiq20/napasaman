@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+!.env.example
+vendor
+node_modules
+wa-bot
+tests
+storage/logs/*.log
