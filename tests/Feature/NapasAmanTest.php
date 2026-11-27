@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\AirQualityLog;
 use App\Models\Region;
 use App\Models\SmokeReport;
 use App\Models\User;
+use App\Services\AirQualityService;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -318,5 +322,157 @@ class NapasAmanTest extends TestCase
             ->assertJsonPath('status', 'ok')
             ->assertJsonPath('ai_powered', false);
         $this->assertStringContainsString('Kabupaten Tulungagung', $fallbackResponse->json('reply'));
+    }
+
+    public function test_whatsapp_bot_fallback_fixes_greeting_region_matching_and_lapor_validation(): void
+    {
+        config([
+            'services.gemini.api_key' => '',
+            'services.whatsapp.webhook_secret' => 'test-secret-123',
+        ]);
+
+        // 1. Messages starting with "P" (like "Polusi..." or "PM2.5...") must NOT trigger MENU greeting
+        $polusiRes = $this->postJson('/api/whatsapp/webhook', [
+            'sender' => '6281234990011',
+            'message' => 'Polusi di Kediri gimana hari ini?',
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+
+        $polusiRes->assertOk()
+            ->assertJsonPath('command', 'CEK');
+        $this->assertStringContainsString('Kota Kediri', $polusiRes->json('reply'));
+
+        $pmRes = $this->postJson('/api/whatsapp/webhook', [
+            'sender' => '6281234990012',
+            'message' => 'PM2.5 hari ini berapa?',
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+
+        $pmRes->assertOk()
+            ->assertJsonPath('command', 'CEK')
+            ->assertJsonPath('meta.mode', 'all_regions');
+
+        // Standalone "p" still returns greeting MENU
+        $pRes = $this->postJson('/api/whatsapp/webhook', [
+            'sender' => '6281234990013',
+            'message' => 'p',
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+        $pRes->assertOk()->assertJsonPath('command', 'MENU');
+
+        // 2. Short junk inputs must NOT falsely match a Kediri Raya region
+        foreach (['CEK a', 'CEK di', 'CEK kota'] as $badQuery) {
+            $res = $this->postJson('/api/whatsapp/webhook', [
+                'sender' => '6281234990014',
+                'message' => $badQuery,
+            ], ['X-Webhook-Secret' => 'test-secret-123']);
+
+            $res->assertOk()
+                ->assertJsonPath('command', 'CEK')
+                ->assertJsonPath('meta.found', false);
+        }
+
+        // 3. "LAPOR SAMPAH" without location or photo must prompt for location instead of creating a report
+        $beforeCount = SmokeReport::count();
+        $emptyLapor = $this->postJson('/api/whatsapp/webhook', [
+            'sender' => '6281234990015',
+            'message' => 'LAPOR SAMPAH',
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+
+        $emptyLapor->assertOk()
+            ->assertJsonPath('command', 'LAPOR')
+            ->assertJsonPath('meta.created', false);
+        $this->assertEquals($beforeCount, SmokeReport::count());
+
+        // 4. Non-image base64 payload in LAPOR must be rejected (photo_path remains null)
+        $fakeImgLapor = $this->postJson('/api/whatsapp/webhook', [
+            'sender' => '6281234990016',
+            'message_type' => 'image',
+            'message' => 'LAPOR SAMPAH Dekat Alun-Alun Kota Kediri',
+            'image_base64' => base64_encode('<?php echo "not an image"; ?>'),
+            'image_mime' => 'image/png',
+        ], ['X-Webhook-Secret' => 'test-secret-123']);
+
+        $fakeImgLapor->assertOk()
+            ->assertJsonPath('command', 'LAPOR')
+            ->assertJsonPath('meta.photo_path', null);
+    }
+
+    public function test_user_seeder_does_not_overwrite_changed_admin_password(): void
+    {
+        $admin = User::where('email', 'admin@napasaman.id')->firstOrFail();
+        $admin->update(['password' => Hash::make('custom-strong-password-999')]);
+
+        (new UserSeeder())->run();
+
+        $admin->refresh();
+        $this->assertTrue(Hash::check('custom-strong-password-999', $admin->password));
+        $this->assertFalse(Hash::check('napasaman2026', $admin->password));
+    }
+
+    public function test_open_meteo_sync_does_not_duplicate_same_timestamp_logs(): void
+    {
+        $regions = Region::where('is_active', true)->orderBy('id')->get();
+        $fixedTime = '2026-11-27T10:00';
+
+        $mockItems = $regions->map(fn () => [
+            'current' => [
+                'time' => $fixedTime,
+                'pm2_5' => 21.5,
+                'pm10' => 33.0,
+                'nitrogen_dioxide' => 12.1,
+                'us_aqi' => 71,
+            ],
+            'hourly' => [
+                'time' => [$fixedTime],
+                'pm2_5' => [21.5],
+                'us_aqi' => [71],
+            ],
+        ])->values()->all();
+
+        Http::fake([
+            '*air-quality-api.open-meteo.com*' => Http::response($mockItems, 200),
+        ]);
+
+        $service = app(AirQualityService::class);
+        $this->assertTrue($service->syncAllRegionsFromOpenMeteo($regions));
+        $countAfterFirst = AirQualityLog::where('source', 'open-meteo')
+            ->where('recorded_at', '2026-11-27 10:00:00')
+            ->count();
+
+        $this->assertTrue($service->syncAllRegionsFromOpenMeteo($regions));
+        $countAfterSecond = AirQualityLog::where('source', 'open-meteo')
+            ->where('recorded_at', '2026-11-27 10:00:00')
+            ->count();
+
+        $this->assertEquals($regions->count(), $countAfterFirst);
+        $this->assertEquals($countAfterFirst, $countAfterSecond);
+    }
+
+    public function test_security_hardening_in_clean_route_xss_escaping_and_service_worker(): void
+    {
+        $response = $this->get('/rute-bersih');
+        $response->assertOk();
+        $response->assertSee('function escapeHtml(', false);
+        $response->assertSee('escapeHtml(h.description)', false);
+
+        $swContents = file_get_contents(public_path('sw.js'));
+        $this->assertNotFalse($swContents);
+        $this->assertStringContainsString("'/admin'", $swContents);
+        $this->assertStringContainsString("'/login'", $swContents);
+    }
+
+    public function test_exposure_calculator_rejects_inactive_region_cleanly(): void
+    {
+        $inactive = Region::create([
+            'name' => 'Wilayah Uji Nonaktif',
+            'slug' => 'wilayah-uji-nonaktif',
+            'latitude' => -7.85,
+            'longitude' => 112.05,
+            'is_active' => false,
+        ]);
+
+        $this->postJson('/kalkulator-paparan/hitung', [
+            'region_slug' => $inactive->slug,
+            'activity' => 'motor',
+            'duration_minutes' => 30,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['region_slug']);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Region;
 use App\Services\AirQualityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ExposureCalculatorController extends Controller
@@ -53,24 +54,27 @@ class ExposureCalculatorController extends Controller
     public function calculate(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'region_slug' => ['required', 'string', 'exists:regions,slug'],
+            'region_slug' => ['required', 'string', Rule::exists('regions', 'slug')->where('is_active', true)],
             'activity' => ['required', 'in:motor,jalan_kaki,jogging,dalam_rumah'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:720'],
         ]);
 
         $regions = $this->airQualityService->getRegionsWithLatestAirQuality();
-        $region = $regions->firstWhere('slug', $validated['region_slug']);
+        $region = $regions->firstWhere('slug', $validated['region_slug'])
+            ?? Region::where('slug', $validated['region_slug'])->with('latestAirQuality')->firstOrFail();
+
+        $aq = $region->latestAirQuality;
 
         $result = $this->airQualityService->calculateExposure(
-            (float) ($region->latestAirQuality->pm25 ?? 18.0),
+            (float) ($aq->pm25 ?? 18.0),
             $validated['activity'],
             (int) $validated['duration_minutes']
         );
 
         return response()->json([
             'region' => $region->name,
-            'aqi' => $region->latestAirQuality->aqi,
-            'category' => $region->latestAirQuality->category,
+            'aqi' => (int) ($aq->aqi ?? 60),
+            'category' => $aq->category ?? 'Sedang',
             'result' => $result,
         ]);
     }

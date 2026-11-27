@@ -24,6 +24,10 @@ class HomeController extends Controller
         $selectedSlug = $request->query('region', 'kota-kediri');
         $selectedRegion = $regions->firstWhere('slug', $selectedSlug) ?? $regions->first();
 
+        if (! $selectedRegion || ! $selectedRegion->latestAirQuality) {
+            abort(503, 'Data kualitas udara wilayah belum tersedia.');
+        }
+
         $hourlyTrend = $this->airQualityService->getHourlyTrend($selectedRegion);
         $bestJogging = $this->airQualityService->getBestJoggingWindow($hourlyTrend);
         $aq = $selectedRegion->latestAirQuality;
@@ -87,16 +91,22 @@ class HomeController extends Controller
         $jog = $this->airQualityService->getBestJoggingWindow($trend);
         $aq = $target->latestAirQuality;
 
+        $aqi = (int) ($aq->aqi ?? 60);
+        $pm25 = (float) ($aq->pm25 ?? 18.0);
+        $pm10 = (float) ($aq->pm10 ?? 28.0);
+        $no2 = (float) ($aq->no2 ?? 10.0);
+        $category = $aq->category ?? 'Sedang';
+
         return response()->json([
             'region' => $target->name,
-            'aqi' => $aq->aqi,
-            'pm25' => $aq->pm25,
-            'pm10' => $aq->pm10,
-            'no2' => $aq->no2,
-            'category' => $aq->category,
+            'aqi' => $aqi,
+            'pm25' => $pm25,
+            'pm10' => $pm10,
+            'no2' => $no2,
+            'category' => $category,
             'trend' => $trend,
             'jogging' => $jog,
-            'recommendations' => $this->airQualityService->getSegmentRecommendations((int) $aq->aqi, (float) $aq->pm25, $jog),
+            'recommendations' => $this->airQualityService->getSegmentRecommendations($aqi, $pm25, $jog),
         ]);
     }
 }

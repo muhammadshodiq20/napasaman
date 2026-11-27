@@ -1,15 +1,21 @@
-const CACHE_NAME = 'napasaman-pwa-v1';
+const CACHE_NAME = 'napasaman-pwa-v2';
 const OFFLINE_ASSETS = [
   '/',
   '/rute-bersih',
   '/kalkulator-paparan',
-  '/lapor-asap',
   '/bot-wa',
   '/manifest.json',
   '/images/napasaman-logo.png',
   '/images/icon-192.png',
   '/images/icon-512.png'
 ];
+
+// Never cache authenticated, admin, API, or CSRF-bearing form routes
+const NEVER_CACHE_PREFIXES = ['/admin', '/login', '/logout', '/api', '/lapor-asap'];
+
+function isCacheablePath(pathname) {
+  return !NEVER_CACHE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -38,12 +44,15 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+  if (!isCacheablePath(url.pathname)) return;
 
   // Network-first strategy for fresh AQI data, fallback to cache when offline
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response && response.status === 200) {
+        const cacheControl = (response.headers.get('Cache-Control') || '').toLowerCase();
+        const isPrivate = cacheControl.includes('no-store') || cacheControl.includes('private');
+        if (response && response.status === 200 && response.type === 'basic' && !isPrivate) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }

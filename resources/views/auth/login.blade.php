@@ -45,22 +45,24 @@
             </button>
         </form>
 
-        <!-- Demo Accounts Box -->
-        <div class="rounded-2xl bg-sky-50/70 border border-sky-200 p-4 space-y-2.5">
-            <p class="text-xs font-extrabold text-[#0B3566]">Akun Demo AIRIMPACT 2026 (Klik untuk isi cepat):</p>
-            <div class="grid grid-cols-1 gap-2">
-                <button type="button" onclick="fillDemo('admin@napasaman.id', 'napasaman2026')"
-                        class="text-left px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 text-xs transition">
-                    <span class="font-extrabold text-[#0B3566]">Admin NapasAman</span>
-                    <span class="block text-[11px] text-slate-500 font-mono">admin@napasaman.id / napasaman2026</span>
-                </button>
-                <button type="button" onclick="fillDemo('mitra@napasaman.id', 'napasaman2026')"
-                        class="text-left px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 text-xs transition">
-                    <span class="font-extrabold text-[#2E9E3F]">Mitra RT/RW &amp; Bank Sampah</span>
-                    <span class="block text-[11px] text-slate-500 font-mono">mitra@napasaman.id / napasaman2026</span>
-                </button>
+        @if (! app()->isProduction())
+            <!-- Demo Accounts Box (Non-production only) -->
+            <div class="rounded-2xl bg-sky-50/70 border border-sky-200 p-4 space-y-2.5">
+                <p class="text-xs font-extrabold text-[#0B3566]">Akun Demo AIRIMPACT 2026 (Klik untuk isi cepat):</p>
+                <div class="grid grid-cols-1 gap-2">
+                    <button type="button" onclick="fillDemo('admin@napasaman.id', 'napasaman2026')"
+                            class="text-left px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 text-xs transition">
+                        <span class="font-extrabold text-[#0B3566]">Admin NapasAman</span>
+                        <span class="block text-[11px] text-slate-500 font-mono">admin@napasaman.id / napasaman2026</span>
+                    </button>
+                    <button type="button" onclick="fillDemo('mitra@napasaman.id', 'napasaman2026')"
+                            class="text-left px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 text-xs transition">
+                        <span class="font-extrabold text-[#2E9E3F]">Mitra RT/RW &amp; Bank Sampah</span>
+                        <span class="block text-[11px] text-slate-500 font-mono">mitra@napasaman.id / napasaman2026</span>
+                    </button>
+                </div>
             </div>
-        </div>
+        @endif
     </div>
 </div>
 @endsection

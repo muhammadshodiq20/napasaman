@@ -85,7 +85,7 @@ class WhatsappBotController extends Controller
             'uniqueUsers' => $uniqueUsers,
             'webhookUrl' => url('/api/whatsapp/webhook'),
             'geminiEnabled' => $this->geminiService->isConfigured(),
-            'geminiModel' => config('services.gemini.model', 'gemini-3.8-flash'),
+            'geminiModel' => config('services.gemini.model', 'gemini-2.5-flash'),
         ]);
     }
 
@@ -115,7 +115,7 @@ class WhatsappBotController extends Controller
             'service' => 'NapasAman Sobat Napas WhatsApp Webhook (Baileys + Gemini AI)',
             'bot_number' => '+' . config('services.whatsapp.bot_number', '62895366866722'),
             'gemini_configured' => $this->geminiService->isConfigured(),
-            'gemini_model' => config('services.gemini.model', 'gemini-3.8-flash'),
+            'gemini_model' => config('services.gemini.model', 'gemini-2.5-flash'),
             'webhook_protected' => trim((string) config('services.whatsapp.webhook_secret', '')) !== '',
             'region_scope' => 'Eks-Karesidenan Kediri (7 Wilayah)',
         ]);

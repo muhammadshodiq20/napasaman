@@ -178,14 +178,14 @@
 
                 <!-- Simulation Speed & Stop Bar (visible when navigating) -->
                 <div id="navActiveControls" class="hidden pt-2 border-t border-white/15 flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 text-[11px]">
+                    <div id="simSpeedControls" class="flex items-center gap-1.5 text-[11px]">
                         <span class="text-sky-200 font-semibold">Kecepatan:</span>
                         <button type="button" data-speed="1" class="sim-speed-btn px-2 py-1 rounded-lg bg-white text-[#0B3566] font-extrabold">1x</button>
                         <button type="button" data-speed="2" class="sim-speed-btn px-2 py-1 rounded-lg bg-white/15 text-white font-bold">2x</button>
                         <button type="button" data-speed="4" class="sim-speed-btn px-2 py-1 rounded-lg bg-white/15 text-white font-bold">4x</button>
                     </div>
                     <button type="button" id="btnStopNav"
-                            class="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-extrabold transition">
+                            class="ml-auto px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-extrabold transition">
                         ■ Berhenti
                     </button>
                 </div>
@@ -210,7 +210,7 @@
                     <div class="flex items-center justify-between gap-2">
                         <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#2E9E3F]">
                             <span class="w-3 h-3 rounded-full bg-[#2E9E3F]"></span>
-                            RUTE TERBERSIH (DIPILIH)
+                            <span id="cleanRouteTitle">RUTE TERBERSIH (DIPILIH)</span>
                         </span>
                         <span id="cleanSavingsBadge" class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">Lebih Bersih</span>
                     </div>
@@ -237,7 +237,7 @@
                     <div class="flex items-center justify-between gap-2">
                         <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0B3566]">
                             <span class="w-3 h-3 rounded-full bg-[#38A8E8]"></span>
-                            RUTE TERCEPAT (STANDAR)
+                            <span id="fastRouteTitle">RUTE TERCEPAT (STANDAR)</span>
                         </span>
                         <span id="fastestHotspotBadge" class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">Standar</span>
                     </div>
@@ -381,6 +381,15 @@
     const STATIONS = @json($stationsPayload);
     const HOTSPOTS = @json($hotspotsPayload);
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     const PROFILES = {
         komuter: {
             label: 'Kantoran & Komuter',
@@ -440,9 +449,10 @@
 
     // 7 Kediri Raya AQI Station Markers
     STATIONS.forEach((st) => {
+        const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(String(st.color || '')) ? st.color : '#EAB308';
         const icon = L.divIcon({
             className: 'aqi-station-pin',
-            html: `<div style="background:${st.color};color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:999px;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.22);white-space:nowrap;">${st.aqi}</div>`,
+            html: `<div style="background:${safeColor};color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:999px;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.22);white-space:nowrap;">${escapeHtml(st.aqi)}</div>`,
             iconSize: [38, 24],
             iconAnchor: [19, 12]
         });
@@ -451,9 +461,9 @@
             .addTo(map)
             .bindPopup(`
                 <div style="min-width:170px">
-                    <strong style="color:#0B3566;font-size:13px">${st.name}</strong><br>
-                    <span style="font-size:12px">AQI: <b>${st.aqi}</b> (${st.category})</span><br>
-                    <span style="font-size:12px">PM2.5: <b>${st.pm25} µg/m³</b></span>
+                    <strong style="color:#0B3566;font-size:13px">${escapeHtml(st.name)}</strong><br>
+                    <span style="font-size:12px">AQI: <b>${escapeHtml(st.aqi)}</b> (${escapeHtml(st.category)})</span><br>
+                    <span style="font-size:12px">PM2.5: <b>${escapeHtml(st.pm25)} µg/m³</b></span>
                 </div>
             `);
     });
@@ -479,10 +489,10 @@
             .addTo(map)
             .bindPopup(`
                 <div style="min-width:200px">
-                    <span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700">${h.category}</span>
-                    <div style="font-weight:800;color:#0B3566;margin-top:4px">${h.region}</div>
-                    <p style="font-size:11px;color:#475569;margin:4px 0">${h.description}</p>
-                    <div style="font-size:10px;color:#64748B">Status: <b>${h.status_label}</b> • ${h.created_at}</div>
+                    <span style="background:#FEE2E2;color:#B91C1C;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700">${escapeHtml(h.category)}</span>
+                    <div style="font-weight:800;color:#0B3566;margin-top:4px">${escapeHtml(h.region)}</div>
+                    <p style="font-size:11px;color:#475569;margin:4px 0">${escapeHtml(h.description)}</p>
+                    <div style="font-size:10px;color:#64748B">Status: <b>${escapeHtml(h.status_label)}</b> • ${escapeHtml(h.created_at)}</div>
                 </div>
             `);
     });
@@ -512,6 +522,10 @@
     let lastSpokenStepIdx = -1;
     let lastHotspotAlertId = null;
     let accumulatedUg = 0;
+    let lastNavCoordIdx = null;
+    let lastLivePos = null;
+    let lastRerouteAt = 0;
+    let isRerouting = false;
 
     function parseCoord(val) {
         const [lat, lng] = val.split(',').map(Number);
@@ -749,10 +763,10 @@
             return `
                 <li class="py-2 px-2 rounded-lg flex items-center justify-between gap-2 ${activeCls}">
                     <span class="flex items-center gap-2">
-                        <span class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-sm shrink-0">${s.icon}</span>
-                        <span>${s.text}</span>
+                        <span class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-sm shrink-0">${escapeHtml(s.icon)}</span>
+                        <span>${escapeHtml(s.text)}</span>
                     </span>
-                    <span class="text-[11px] font-mono text-slate-500 shrink-0">${distText}</span>
+                    <span class="text-[11px] font-mono text-slate-500 shrink-0">${escapeHtml(distText)}</span>
                 </li>
             `;
         }).join('');
@@ -762,13 +776,19 @@
         activeRouteChoice = choice;
         const cleanCard = document.getElementById('cardCleanRoute');
         const fastCard = document.getElementById('cardFastRoute');
+        const cleanTitle = document.getElementById('cleanRouteTitle');
+        const fastTitle = document.getElementById('fastRouteTitle');
 
         if (choice === 'clean') {
             cleanCard.className = 'cursor-pointer rounded-2xl bg-white border-2 border-[#2E9E3F] p-4 shadow-sm space-y-2.5 transition';
             fastCard.className = 'cursor-pointer rounded-2xl bg-white border border-slate-200 hover:border-[#38A8E8] p-4 shadow-sm space-y-2.5 transition';
+            if (cleanTitle) cleanTitle.textContent = 'RUTE TERBERSIH (DIPILIH)';
+            if (fastTitle) fastTitle.textContent = 'RUTE TERCEPAT (STANDAR)';
         } else {
             cleanCard.className = 'cursor-pointer rounded-2xl bg-white border border-slate-200 hover:border-[#2E9E3F] p-4 shadow-sm space-y-2.5 transition';
             fastCard.className = 'cursor-pointer rounded-2xl bg-white border-2 border-[#38A8E8] p-4 shadow-sm space-y-2.5 transition';
+            if (cleanTitle) cleanTitle.textContent = 'RUTE TERBERSIH (REKOMENDASI)';
+            if (fastTitle) fastTitle.textContent = 'RUTE TERCEPAT (DIPILIH)';
         }
 
         if (evaluatedRoutes[choice]) {
@@ -787,8 +807,36 @@
         let cleanestRaw = null;
 
         if (primaryRoutes.length >= 2) {
+            // Compare OSRM alternatives neutrally by hotspot hits & PM2.5 exposure so the genuinely cleaner route is picked
+            const scored = primaryRoutes.map((r, idx) => ({
+                raw: r,
+                idx,
+                neutral: evaluateRoute(r, false),
+            }));
             fastestRaw = primaryRoutes[0];
-            cleanestRaw = primaryRoutes[1];
+
+            const sortedByClean = [...scored].sort((a, b) => {
+                if (a.neutral.hitHotspots.length !== b.neutral.hitHotspots.length) {
+                    return a.neutral.hitHotspots.length - b.neutral.hitHotspots.length;
+                }
+                return a.neutral.inhaledUg - b.neutral.inhaledUg;
+            });
+
+            cleanestRaw = sortedByClean[0].raw;
+            if (cleanestRaw === fastestRaw) {
+                // If fastest route is already cleaner than alternative 1, try a clean detour waypoint avoiding hotspots
+                const cleanWp = buildCleanWaypoint(startCoords, endCoords);
+                const detourRoutes = await fetchOsrmRoutes([startCoords, cleanWp, endCoords]);
+                if (detourRoutes.length > 0) {
+                    const detourNeutral = evaluateRoute(detourRoutes[0], false);
+                    const altNeutral = scored[1].neutral;
+                    cleanestRaw = detourNeutral.hitHotspots.length <= altNeutral.hitHotspots.length
+                        ? detourRoutes[0]
+                        : scored[1].raw;
+                } else {
+                    cleanestRaw = scored[1].raw;
+                }
+            }
         } else if (primaryRoutes.length === 1) {
             fastestRaw = primaryRoutes[0];
             const cleanWp = buildCleanWaypoint(startCoords, endCoords);
@@ -843,22 +891,38 @@
         document.getElementById('fastExposure').textContent = `${evalFast.inhaledUg} µg`;
         document.getElementById('fastNote').textContent = `Rata-rata PM2.5: ${evalFast.avgPm25} µg/m³ • Jalur arteri utama.`;
 
-        const reduction = evalFast.inhaledUg > 0
-            ? Math.max(8, Math.round(((evalFast.inhaledUg - evalClean.inhaledUg) / evalFast.inhaledUg) * 100))
-            : 18;
-        document.getElementById('cleanSavingsBadge').textContent = `-${reduction}% Paparan PM2.5`;
+        const savingsBadge = document.getElementById('cleanSavingsBadge');
+        if (evalFast.inhaledUg > 0 && evalClean.inhaledUg < evalFast.inhaledUg) {
+            const reduction = Math.round(((evalFast.inhaledUg - evalClean.inhaledUg) / evalFast.inhaledUg) * 100);
+            savingsBadge.textContent = reduction > 0 ? `-${reduction}% Paparan PM2.5` : 'Lebih Bersih';
+        } else if (evalClean.hitHotspots.length < evalFast.hitHotspots.length) {
+            savingsBadge.textContent = 'Hindari Hotspot Asap';
+        } else {
+            savingsBadge.textContent = 'Paparan Setara';
+        }
 
-        // Automatic smoke hotspot warning
+        // Automatic smoke hotspot warning (checks both fastest and cleanest routes)
         const warnBox = document.getElementById('smokeWarningBox');
         const warnText = document.getElementById('smokeWarningText');
         const fastBadge = document.getElementById('fastestHotspotBadge');
 
-        if (evalFast.hitHotspots.length > 0) {
+        if (evalFast.hitHotspots.length > 0 && evalClean.hitHotspots.length === 0) {
             const names = evalFast.hitHotspots.map(h => `${h.category} (${h.region})`).join(', ');
             warnText.textContent = `Rute tercepat melintasi dekat ${evalFast.hitHotspots.length} titik asap laporan warga aktif: ${names}. Disarankan navigasi menggunakan Rute Terbersih (garis hijau).`;
             warnBox.classList.remove('hidden');
             fastBadge.textContent = `⚠ Lewati ${evalFast.hitHotspots.length} Titik Asap`;
             fastBadge.className = 'px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold';
+        } else if (evalClean.hitHotspots.length > 0) {
+            const allHits = new Map([...evalFast.hitHotspots, ...evalClean.hitHotspots].map(h => [h.id, h]));
+            const names = Array.from(allHits.values()).map(h => `${h.category} (${h.region})`).join(', ');
+            warnText.textContent = `Kedua rute melewati area dekat titik asap aktif (${names}). Sangat disarankan memakai masker KF94/N95 dan menutup kaca helm selama melintas.`;
+            warnBox.classList.remove('hidden');
+            fastBadge.textContent = evalFast.hitHotspots.length > 0
+                ? `⚠ Lewati ${evalFast.hitHotspots.length} Titik Asap`
+                : 'Bebas Hotspot';
+            fastBadge.className = evalFast.hitHotspots.length > 0
+                ? 'px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold'
+                : 'px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold';
         } else {
             warnBox.classList.add('hidden');
             fastBadge.textContent = 'Bebas Hotspot';
@@ -919,9 +983,25 @@
         const speedKmh = PROFILES[activeProfileKey].speedKmh;
         const remainMin = Math.max(1, Math.round((remainKm / speedKmh) * 60));
 
-        // Live local PM2.5 at current moving position
+        // Live local PM2.5 at current moving position (distance-based exposure, independent of simulation speed)
         const reading = localPm25At(lat, lng, route.isClean);
-        const stepExposureUg = (reading.pm25 * PROFILES[activeProfileKey].breathingRate) / 600;
+        let deltaKm = 0;
+        if (navMode === 'sim' && lastNavCoordIdx !== null && nearestIdx > lastNavCoordIdx) {
+            for (let i = lastNavCoordIdx; i < nearestIdx; i++) {
+                deltaKm += haversineKm(route.coords[i][0], route.coords[i][1], route.coords[i + 1][0], route.coords[i + 1][1]);
+            }
+        } else if (navMode === 'gps' && lastLivePos) {
+            const movedKm = haversineKm(lastLivePos.lat, lastLivePos.lng, lat, lng);
+            // Ignore GPS jitter > 0.5 km in a single update or tiny sub-3m drift
+            if (movedKm >= 0.003 && movedKm <= 0.5) {
+                deltaKm = movedKm;
+            }
+        }
+        lastNavCoordIdx = nearestIdx;
+        lastLivePos = { lat, lng };
+
+        const deltaHours = deltaKm / Math.max(1, speedKmh);
+        const stepExposureUg = reading.pm25 * PROFILES[activeProfileKey].breathingRate * deltaHours;
         accumulatedUg += stepExposureUg;
 
         document.getElementById('hudRemainDist').textContent = remainKm < 1 ? `${Math.round(remainKm * 1000)} m` : `${remainKm.toFixed(1)} km`;
@@ -988,11 +1068,16 @@
             map.panTo([lat, lng], { animate: true, duration: 0.4 });
         }
 
-        // Auto-reroute in GPS mode if user goes >180m off route inside Kediri Raya
-        if (navMode === 'gps' && minD > 0.18 && maxBounds.contains([lat, lng])) {
+        // Auto-reroute in GPS mode if user goes >180m off route inside Kediri Raya (with 15s cooldown)
+        const nowMs = Date.now();
+        if (navMode === 'gps' && minD > 0.18 && maxBounds.contains([lat, lng]) && !isRerouting && (nowMs - lastRerouteAt) > 15000) {
+            isRerouting = true;
+            lastRerouteAt = nowMs;
             startCoords = { lat, lng };
             speakId('Anda keluar jalur, menghitung ulang rute udara terbersih.');
-            calculateRoutes().then(() => startGpsNavigation());
+            calculateRoutes()
+                .then(() => startGpsNavigation(true))
+                .finally(() => { isRerouting = false; });
         }
     }
 
@@ -1003,12 +1088,15 @@
         stopNavigation(false);
         navMode = 'sim';
         accumulatedUg = 0;
+        lastNavCoordIdx = 0;
+        lastLivePos = null;
         lastSpokenStepIdx = -1;
         lastHotspotAlertId = null;
         autoFollow = true;
 
         document.getElementById('liveNavHud').classList.remove('hidden');
         document.getElementById('navActiveControls').classList.remove('hidden');
+        document.getElementById('simSpeedControls').classList.remove('hidden');
         document.getElementById('hudModeBadge').textContent = 'SIMULASI NAVIGASI REAL-TIME';
         document.getElementById('routingStatus').textContent = 'Navigasi simulasi aktif • Memantau PM2.5 per ruas jalan';
 
@@ -1035,7 +1123,7 @@
         simTimerId = setTimeout(stepInterval, 500);
     }
 
-    function startGpsNavigation() {
+    function startGpsNavigation(preserveAccumulated = false) {
         const route = evaluatedRoutes[activeRouteChoice];
         if (!route || !route.coords.length) return;
         if (!navigator.geolocation) {
@@ -1045,16 +1133,23 @@
 
         stopNavigation(false);
         navMode = 'gps';
-        accumulatedUg = 0;
+        if (!preserveAccumulated) {
+            accumulatedUg = 0;
+        }
+        lastNavCoordIdx = null;
+        lastLivePos = null;
         lastSpokenStepIdx = -1;
         lastHotspotAlertId = null;
         autoFollow = true;
 
         document.getElementById('liveNavHud').classList.remove('hidden');
         document.getElementById('navActiveControls').classList.remove('hidden');
+        document.getElementById('simSpeedControls').classList.add('hidden');
         document.getElementById('hudModeBadge').textContent = 'GPS LIVE AKTIF';
         document.getElementById('routingStatus').textContent = 'Melacak posisi GPS Anda secara real-time...';
-        speakId('Navigasi real-time NapasAman dimulai. Mengikuti rute udara terbersih.');
+        if (!preserveAccumulated) {
+            speakId('Navigasi real-time NapasAman dimulai. Mengikuti rute udara terbersih.');
+        }
 
         gpsWatchId = navigator.geolocation.watchPosition(
             (pos) => {
@@ -1120,7 +1215,7 @@
     });
     document.getElementById('btnCalculateRoute').addEventListener('click', calculateRoutes);
     document.getElementById('btnStartSimNav').addEventListener('click', startSimNavigation);
-    document.getElementById('btnStartGpsNav').addEventListener('click', startGpsNavigation);
+    document.getElementById('btnStartGpsNav').addEventListener('click', () => startGpsNavigation(false));
     document.getElementById('btnStopNav').addEventListener('click', () => stopNavigation(true));
 
     document.getElementById('btnRecenterMap').addEventListener('click', () => {

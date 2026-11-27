@@ -202,7 +202,7 @@
     <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="p-5 sm:p-6 border-b border-slate-100">
             <h2 class="text-lg font-extrabold text-[#0B3566]">Log Interaksi Terbaru WhatsApp Bot "Sobat Napas"</h2>
-            <p class="text-xs text-slate-500">10 percakapan terakhir yang masuk melalui webhook maupun simulasi <code>/bot-wa</code>.</p>
+            <p class="text-xs text-slate-500">10 percakapan terakhir yang masuk melalui webhook resmi WhatsApp Bot Sobat Napas (<code>/api/whatsapp/webhook</code>).</p>
         </div>
 
         <div class="overflow-x-auto">

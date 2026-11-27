@@ -60,7 +60,8 @@
                                 • <span class="font-semibold" x-text="current.source === 'open-meteo' ? 'Open-Meteo Live' : 'Data Cache MySQL'"></span>
                             </p>
                         </div>
-                        <a href="{{ route('home', ['refresh' => 1]) }}"
+                        <a href="{{ route('home', ['refresh' => 1, 'region' => $selectedRegion->slug]) }}"
+                           :href="'{{ route('home') }}?refresh=1&region=' + encodeURIComponent(selectedSlug)"
                            title="Segarkan data dari Open-Meteo"
                            class="p-2 rounded-xl bg-slate-100 hover:bg-[#38A8E8]/15 text-[#0B3566] transition shrink-0">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>

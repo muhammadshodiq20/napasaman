@@ -326,14 +326,22 @@ class WhatsappBotService
             }
         }
 
-        // 2. Greeting
-        if (preg_match('/^(halo|hai|hello|hi|assalamualaikum|selamat\s+(pagi|siang|sore|malam)|p|mulai|ini\s+bot\s+apa)/iu', $cleanMessage)) {
+        // 2. Greeting (word-bounded so words like "Polusi" / "PM2.5" / "Pagi kak, cek Blitar" are not misclassified)
+        $matchedRegion = $this->findRegionByText($cleanMessage, $regions);
+        $hasJoggingIntent = (bool) preg_match('/\b(jogging|lari|olahraga|sepeda|gowes)\b/iu', $cleanMessage);
+        $hasSpecificAirIntent = (bool) preg_match('/\b(pm2\.?5|aqi|polusi|asap|masker|rute)\b/iu', $cleanMessage);
+
+        if (
+            ! $matchedRegion &&
+            ! $hasJoggingIntent &&
+            ! $hasSpecificAirIntent &&
+            preg_match('/^(?:halo|hai|hello|hi|assalamualaikum|selamat\s+(?:pagi|siang|sore|malam)|p|ping|mulai|ini\s+bot\s+apa)\b/iu', $cleanMessage)
+        ) {
             return ['MENU', $this->getHelpMessage(), ['fallback' => 'greeting'], false];
         }
 
         // 3. Free-form jogging / exercise query
-        $matchedRegion = $this->findRegionByText($cleanMessage, $regions);
-        if (preg_match('/jogging|lari|olahraga|sepeda|gowes/iu', $cleanMessage)) {
+        if ($hasJoggingIntent) {
             [$reply, $extra] = $this->handleJoggingCommand($matchedRegion?->name ?? 'Kota Kediri');
             return ['JOGGING', $reply, array_merge($extra, ['fallback' => true]), false];
         }
@@ -483,7 +491,18 @@ class WhatsappBotService
         $cleanArgs = trim((string) preg_replace('/^lapor\b[\s:,-]*/iu', '', $args));
         $parts = preg_split('/\s+/', $cleanArgs, 2);
         $firstToken = mb_strtolower($parts[0] ?? '');
-        $restText = trim($parts[1] ?? $cleanArgs);
+        $isCategoryToken = (bool) preg_match('/^(sampah|bakar|kendaraan|knalpot|macet|debu|konstruksi|proyek)$/i', $firstToken);
+        $restText = $isCategoryToken ? trim($parts[1] ?? '') : $cleanArgs;
+
+        // If user sent only "LAPOR SAMPAH" (category without location/description, no GPS, and no photo), ask for location
+        if ($restText === '' && empty($imageBase64) && ($latitude === null || $longitude === null)) {
+            return [
+                "Mohon lengkapi *lokasi & keterangan singkat* ya Kak agar laporan bisa kami tampilkan akurat di peta hotspot!\n\n"
+                . "Format:\n*LAPOR [Kategori] [Lokasi & Keterangan]*\n\n"
+                . "Contoh:\n*LAPOR SAMPAH Pembakaran sampah di dekat Simpang Lima Gumul Kediri*",
+                ['created' => false, 'reason' => 'missing_location'],
+            ];
+        }
 
         $lowerAll = mb_strtolower($cleanArgs);
         $category = match (true) {
@@ -492,10 +511,6 @@ class WhatsappBotService
             str_contains($firstToken, 'debu') || str_contains($firstToken, 'konstruksi') || str_contains($firstToken, 'proyek') || str_contains($lowerAll, 'debu') || str_contains($lowerAll, 'konstruksi') => 'Debu Konstruksi',
             default => 'Pembakaran Sampah Terbuka',
         };
-
-        if (! preg_match('/^(sampah|bakar|kendaraan|knalpot|macet|debu|konstruksi|proyek)$/i', $firstToken)) {
-            $restText = $cleanArgs;
-        }
 
         if ($restText === '') {
             $restText = 'Laporan titik asap dengan foto bukti melalui WhatsApp.';
@@ -580,11 +595,23 @@ class WhatsappBotService
                 return null;
             }
 
-            $ext = match (strtolower($mime)) {
+            // Validate decoded bytes are an actual supported raster image (prevents arbitrary file uploads)
+            $imageInfo = @getimagesizefromstring($binary);
+            if ($imageInfo === false || empty($imageInfo['mime'])) {
+                return null;
+            }
+
+            $detectedMime = strtolower((string) $imageInfo['mime']);
+            $ext = match ($detectedMime) {
+                'image/jpeg' => 'jpg',
                 'image/png' => 'png',
                 'image/webp' => 'webp',
-                default => 'jpg',
+                default => null,
             };
+
+            if ($ext === null) {
+                return null;
+            }
 
             $filename = 'reports/wa_' . now()->format('Ymd_His') . '_' . Str::lower(Str::random(6)) . '.' . $ext;
             Storage::disk('public')->put($filename, $binary);
@@ -600,10 +627,19 @@ class WhatsappBotService
     {
         $regions = $regions ?? Region::where('is_active', true)->get();
         $needle = mb_strtolower(trim($text));
+        if ($needle === '') {
+            return null;
+        }
+
+        // Strip region-wide umbrella phrases so "Eks-Karesidenan Kediri" / "Kediri Raya" don't falsely lock to Kota Kediri
+        $needleNormalized = trim((string) preg_replace('/\b(eks[\s-]*karesidenan\s+kediri|kediri\s+raya)\b/u', ' ', $needle));
+        if ($needleNormalized === '') {
+            return null;
+        }
 
         foreach ($regions as $region) {
             $nameLower = mb_strtolower($region->name);
-            if (str_contains($needle, $nameLower) || ($needle !== '' && str_contains($nameLower, $needle))) {
+            if (preg_match('/(?<!\p{L})' . preg_quote($nameLower, '/') . '(?!\p{L})/u', $needleNormalized)) {
                 return $region;
             }
         }
@@ -612,15 +648,15 @@ class WhatsappBotService
             'kabupaten-kediri' => ['kab kediri', 'kab. kediri', 'gumul', 'slg', 'pare', 'ngasem', 'gurah', 'papar', 'kras', 'wates'],
             'kota-kediri' => ['kota kediri', 'kediri', 'mojoroto', 'pesantren', 'alun-alun kediri', 'brantas', 'dhoho'],
             'kabupaten-tulungagung' => ['tulungagung', 'boyolangu', 'ngunut', 'kalidawir', 'kedungwaru'],
-            'kota-blitar' => ['kota blitar', 'bung karno', 'kepanjenkidul', 'sananwetan', 'sukorejo'],
-            'kabupaten-blitar' => ['kab blitar', 'kab. blitar', 'kanigoro', 'wlingi', 'srengat', 'garum', 'blitar'],
+            'kabupaten-blitar' => ['kab blitar', 'kab. blitar', 'kanigoro', 'wlingi', 'srengat', 'garum'],
+            'kota-blitar' => ['kota blitar', 'blitar', 'bung karno', 'kepanjenkidul', 'sananwetan', 'sukorejo'],
             'kabupaten-nganjuk' => ['nganjuk', 'kertosono', 'warujayeng', 'tanjunganom', 'pace', 'berbek'],
             'kabupaten-trenggalek' => ['trenggalek', 'durenan', 'pogalan', 'karangan', 'watulimo', 'prigi'],
         ];
 
         foreach ($aliases as $slug => $keywords) {
             foreach ($keywords as $kw) {
-                if (str_contains($needle, $kw)) {
+                if (preg_match('/(?<!\p{L})' . preg_quote($kw, '/') . '(?!\p{L})/u', $needleNormalized)) {
                     $found = $regions->firstWhere('slug', $slug);
                     if ($found) {
                         return $found;

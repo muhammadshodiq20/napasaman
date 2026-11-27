@@ -87,8 +87,8 @@ class AirQualityService
             $lats = $regions->pluck('latitude')->implode(',');
             $lngs = $regions->pluck('longitude')->implode(',');
 
-            $response = Http::timeout(4)
-                ->connectTimeout(2)
+            $response = Http::timeout(7)
+                ->connectTimeout(4)
                 ->get('https://air-quality-api.open-meteo.com/v1/air-quality', [
                     'latitude' => $lats,
                     'longitude' => $lngs,
@@ -120,16 +120,20 @@ class AirQualityService
                     ? Carbon::parse($current['time'], 'Asia/Jakarta')
                     : now();
 
-                AirQualityLog::create([
-                    'region_id' => $region->id,
-                    'pm25' => $pm25,
-                    'pm10' => $pm10,
-                    'no2' => $no2,
-                    'aqi' => $aqi,
-                    'category' => AirQualityLog::categorizeAqi($aqi),
-                    'source' => 'open-meteo',
-                    'recorded_at' => $recordedAt,
-                ]);
+                AirQualityLog::updateOrCreate(
+                    [
+                        'region_id' => $region->id,
+                        'recorded_at' => $recordedAt,
+                    ],
+                    [
+                        'pm25' => $pm25,
+                        'pm10' => $pm10,
+                        'no2' => $no2,
+                        'aqi' => $aqi,
+                        'category' => AirQualityLog::categorizeAqi($aqi),
+                        'source' => 'open-meteo',
+                    ]
+                );
 
                 if (! empty($item['hourly']['time'])) {
                     Cache::put(
@@ -157,11 +161,14 @@ class AirQualityService
             return $cached;
         }
 
-        // Build from recent MySQL logs or realistic Kediri Raya diurnal curve
+        // Build from recent MySQL logs (deduplicated per hour) or realistic Kediri Raya diurnal curve
         $logs = AirQualityLog::where('region_id', $region->id)
             ->orderByDesc('recorded_at')
-            ->limit(24)
+            ->orderByDesc('id')
+            ->limit(72)
             ->get()
+            ->unique(fn (AirQualityLog $log) => $log->recorded_at->format('Y-m-d H'))
+            ->take(24)
             ->reverse()
             ->values();
 
